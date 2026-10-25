@@ -14,14 +14,20 @@ class CNNDetector(Detector):
     name = "cnn"
 
     def __init__(self, settings):
-        import torch
+        try:
+            import torch
+        except ImportError as exc:
+            raise RuntimeError(
+                "The neural network needs PyTorch, which isn't installed. "
+                "Install it with `pip install torch`, or keep using Signal rules."
+            ) from exc
         from ..model import WhistleNet
 
         path = Path(settings.model.weights_path)
         if not path.exists():
             raise FileNotFoundError(
-                f"No trained model at {path}. Train one with `python -m resona train` "
-                "or run with --detector dsp."
+                f"No trained model at {path}. Train one with `python -m resona train`, "
+                "or keep using Signal rules."
             )
         ckpt = torch.load(path, map_location="cpu")
         self.torch = torch

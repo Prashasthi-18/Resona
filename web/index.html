@@ -23,6 +23,10 @@
   --steam: 255, 255, 255;
   --steam-alpha: .55;
   --track: rgba(22, 32, 42, .10);
+  --violet: #7B5CFF;
+  --mote: 22, 32, 42;
+  --aurora-alpha: .16;
+  --glow: rgba(44, 99, 232, .16);
   --shadow: 0 1px 0 rgba(255,255,255,.7) inset, 0 14px 40px -24px rgba(16, 28, 44, .45);
   --font-ui: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-num: "Big Shoulders Display", "Arial Narrow", "Roboto Condensed", sans-serif;
@@ -37,6 +41,7 @@
     --flame: #6A95FF; --saffron: #F2A541; --saffron-soft: rgba(242, 165, 65, .14);
     --screen: #0A1015; --track: rgba(228, 234, 240, .08);
     --steam: 214, 226, 238; --steam-alpha: .35;
+    --mote: 214, 226, 238; --aurora-alpha: .14; --glow: rgba(106, 149, 255, .22);
     --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 18px 40px -26px rgba(0,0,0,.8);
     color-scheme: dark;
   }
@@ -46,6 +51,7 @@
   --flame: #6A95FF; --saffron: #F2A541; --saffron-soft: rgba(242, 165, 65, .14);
   --screen: #0A1015; --track: rgba(228, 234, 240, .08);
   --steam: 214, 226, 238; --steam-alpha: .35;
+  --mote: 214, 226, 238; --aurora-alpha: .14; --glow: rgba(106, 149, 255, .22);
   --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 18px 40px -26px rgba(0,0,0,.8);
   color-scheme: dark;
 }
@@ -56,11 +62,30 @@ body {
   font: 400 15px/1.5 var(--font-ui);
   -webkit-font-smoothing: antialiased;
   font-variant-numeric: tabular-nums;
+  overflow-x: hidden;
 }
 button, input { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--flame); outline-offset: 3px; border-radius: 6px; }
 
-.shell { max-width: 1240px; margin: 0 auto; padding: 22px 28px 40px; }
+.shell { max-width: 1240px; margin: 0 auto; padding: 22px 28px 40px; position: relative; z-index: 1; }
+
+/* ---------- motion layer ---------- */
+.aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.aurora span { position: absolute; width: 46vmax; height: 46vmax; border-radius: 50%; filter: blur(90px);
+  opacity: var(--aurora-alpha); transition: opacity 1.2s, background-color 1.2s; }
+.aurora .a1 { background: var(--flame); left: -14vmax; top: -16vmax; animation: drift1 26s ease-in-out infinite alternate; }
+.aurora .a2 { background: var(--saffron); right: -18vmax; top: 16vh; animation: drift2 32s ease-in-out infinite alternate; }
+.aurora .a3 { background: var(--violet); left: 28vw; bottom: -26vmax; animation: drift3 38s ease-in-out infinite alternate; }
+.aurora.hot span { opacity: calc(var(--aurora-alpha) * 2.4); }
+.aurora.hot .a1, .aurora.hot .a3 { background: var(--saffron); }
+@keyframes drift1 { to { transform: translate(28vw, 22vh) scale(1.25); } }
+@keyframes drift2 { to { transform: translate(-30vw, 30vh) scale(.8); } }
+@keyframes drift3 { to { transform: translate(-22vw, -26vh) scale(1.3); } }
+#embers, #fx { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; }
+#embers { z-index: 0; }
+#fx { z-index: 15; }
+.rise { animation: rise .9s cubic-bezier(.2, .9, .25, 1) backwards; animation-delay: calc(var(--d, 0) * 110ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(22px); filter: blur(6px); } }
 
 /* ---------- header ---------- */
 header {
@@ -72,7 +97,8 @@ header {
   font: 800 30px/1 var(--font-num); letter-spacing: .02em; margin: 0;
   display: flex; align-items: center; gap: 10px;
 }
-.wordmark svg { width: 26px; height: 26px; }
+.wordmark svg { width: 26px; height: 26px; overflow: visible; }
+.logo-needle { transform-box: view-box; transform-origin: 13px 15px; }
 .brand p { margin: 0; color: var(--muted); font-size: 14px; }
 .status {
   display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 12px;
@@ -86,6 +112,9 @@ header {
   border: 2px solid var(--flame); opacity: 0; animation: ping 1.8s ease-out infinite;
 }
 .status[data-mode="whistle"] .dot { background: var(--saffron); }
+.status[data-mode="whistle"] { animation: pillFlash .55s ease-in-out infinite alternate; }
+@keyframes pillFlash { to { box-shadow: 0 0 0 3px var(--saffron-soft), 0 0 22px -4px var(--saffron); } }
+.status[data-mode="offline"] .dot { background: #D2463C; }
 @keyframes ping { 0% { transform: scale(.5); opacity: .8; } 100% { transform: scale(1.6); opacity: 0; } }
 .actions { display: flex; gap: 10px; }
 .btn {
@@ -97,6 +126,12 @@ header {
 .btn:active { transform: translateY(1px); }
 .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); min-width: 148px; }
 .btn.primary:hover { opacity: .9; }
+.btn.primary { position: relative; overflow: hidden; }
+.btn.primary::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.4) 50%, transparent 70%);
+  transform: translateX(-120%); transition: transform .7s; }
+.btn.primary:hover::after { transform: translateX(120%); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
 
 /* ---------- main grid ---------- */
 main {
@@ -105,9 +140,29 @@ main {
 .gauge-col { display: flex; flex-direction: column; align-items: center; gap: 26px; padding-top: 70px; }
 
 /* gauge */
-.gauge-wrap { position: relative; width: min(100%, 360px); aspect-ratio: 1; }
-#steam { position: absolute; left: -20%; width: 140%; bottom: 93%; height: 70%; pointer-events: none; }
-.gauge { width: 100%; height: 100%; display: block; overflow: visible; }
+.gauge-wrap { position: relative; width: min(100%, 360px); aspect-ratio: 1; margin-bottom: 12%; }
+.gauge-wrap::before { content: ""; position: absolute; inset: 6%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, var(--glow) 0%, transparent 68%); opacity: 0; transition: opacity .6s; }
+.gauge-wrap.listening::before { opacity: 1; animation: glowBreathe 3.2s ease-in-out infinite; }
+.gauge-wrap.whistling::before { --glow: rgba(242, 165, 65, .42); opacity: 1; animation: glowBreathe .5s ease-in-out infinite; }
+@keyframes glowBreathe { 50% { transform: scale(1.12); opacity: .55; } }
+.gauge-wrap.jolt { animation: jolt .55s cubic-bezier(.36, .07, .19, .97); }
+@keyframes jolt {
+  10%, 90% { transform: translate(-1px, 0) rotate(-.4deg); }
+  20%, 80% { transform: translate(3px, -1px) rotate(.6deg); }
+  30%, 50%, 70% { transform: translate(-5px, 1px) rotate(-.9deg); }
+  40%, 60% { transform: translate(5px, -1px) rotate(.9deg); }
+}
+.gauge, #halo { transition: filter .6s, opacity .6s; }
+.gauge-wrap.paused .gauge, .gauge-wrap.paused #halo { filter: saturate(.3); opacity: .7; }
+#halo { position: absolute; inset: -16%; width: 132%; height: 132%; pointer-events: none; }
+/* steam rises from the cooker weight and fades out before it reaches the header */
+#steam { position: absolute; left: -20%; width: 140%; bottom: 108%; height: 58%; pointer-events: none; z-index: 3;
+  -webkit-mask-image: linear-gradient(to top, #000 40%, transparent); mask-image: linear-gradient(to top, #000 40%, transparent); }
+.weight { position: absolute; left: 50%; top: -11.5%; width: 11%; aspect-ratio: 40 / 50; z-index: 2;
+  transform: translateX(-50%); transform-origin: 50% 100%; }
+.weight svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.gauge { width: 100%; height: 100%; display: block; overflow: visible; position: relative; z-index: 1; }
 .gauge .tick { stroke: var(--line); stroke-width: 1.5; }
 .gauge .tick.major { stroke: var(--muted); stroke-width: 2; }
 .gauge .seg { fill: none; stroke: var(--track); stroke-width: 16; stroke-linecap: butt; }
@@ -127,17 +182,25 @@ main {
 .gauge .thresh { stroke: var(--ink); stroke-width: 2.5; stroke-linecap: round; }
 .gauge-center {
   position: absolute; inset: 0; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; text-align: center; pointer-events: none;
+  align-items: center; justify-content: center; text-align: center; pointer-events: none; z-index: 2;
 }
-.count-window { height: 118px; overflow: hidden; position: relative; width: 100%; }
+.count-window { height: 118px; position: relative; width: 100%; }
 .count {
   font: 800 118px/1 var(--font-num); display: block; position: absolute; width: 100%;
-  letter-spacing: -.01em;
+  letter-spacing: -.01em; transition: color .5s, text-shadow .5s;
 }
-.count.enter { animation: rollIn .55s cubic-bezier(.2, .9, .25, 1.15) both; }
-.count.exit { animation: rollOut .4s ease-in both; }
-@keyframes rollIn { from { transform: translateY(100%); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes rollOut { to { transform: translateY(-80%); opacity: 0; } }
+.count.enter { animation: flipIn .75s cubic-bezier(.2, .9, .25, 1.15) both; }
+.count.exit { animation: flipOut .35s ease-in both; }
+@keyframes flipIn {
+  0% { transform: perspective(500px) rotateX(-95deg) translateY(25%) scale(.7); opacity: 0; filter: blur(6px); }
+  55% { transform: perspective(500px) rotateX(10deg) scale(1.2); opacity: 1; filter: blur(0);
+        color: var(--saffron); text-shadow: 0 0 36px var(--saffron); }
+  100% { transform: none; }
+}
+@keyframes flipOut { to { transform: perspective(500px) rotateX(95deg) translateY(-25%) scale(.8); opacity: 0; filter: blur(6px); } }
+.gauge-wrap.done .count { color: var(--saffron); text-shadow: 0 0 28px rgba(242, 165, 65, .5); }
+.gauge-wrap.done .count:not(.enter):not(.exit) { animation: donePulse 1.4s ease-in-out infinite; }
+@keyframes donePulse { 50% { transform: scale(1.06); text-shadow: 0 0 46px rgba(242, 165, 65, .8); } }
 .count-label { color: var(--muted); font-size: 15px; margin-top: 2px; }
 .conf-readout { margin-top: 14px; font-size: 13px; color: var(--muted); }
 .conf-readout b { color: var(--ink); font-weight: 600; }
@@ -146,10 +209,15 @@ main {
 .done-banner {
   width: 100%; border-radius: 14px; padding: 14px 16px; display: none;
   background: var(--saffron-soft); border: 1px solid var(--saffron);
-  align-items: center; gap: 14px;
+  align-items: center; gap: 14px; position: relative; overflow: hidden;
 }
-.done-banner.show { display: flex; animation: drop .5s cubic-bezier(.2,.9,.25,1.1); }
+.done-banner.show { display: flex; animation: drop .5s cubic-bezier(.2,.9,.25,1.1), bannerPulse 1.8s ease-in-out .5s infinite; }
 @keyframes drop { from { transform: translateY(-10px); opacity: 0; } }
+@keyframes bannerPulse { 50% { box-shadow: 0 0 0 6px var(--saffron-soft), 0 0 30px -4px var(--saffron); } }
+.done-banner::after { content: ""; position: absolute; inset: 0; pointer-events: none; transform: translateX(-100%);
+  background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.3) 50%, transparent 65%); }
+.done-banner.show::after { animation: shine 2.6s ease-in-out .3s infinite; }
+@keyframes shine { 60%, 100% { transform: translateX(100%); } }
 .done-banner p { margin: 0; flex: 1; font-weight: 500; }
 .done-banner strong { display: block; font-size: 17px; }
 
@@ -183,8 +251,10 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
 .screen {
   background: var(--screen); border-radius: 18px; padding: 18px 18px 14px;
   box-shadow: 0 30px 60px -40px rgba(5, 15, 30, .9), inset 0 0 0 1px var(--screen-line);
-  color: var(--screen-ink); font-size: 12.5px;
+  color: var(--screen-ink); font-size: 12.5px; transition: box-shadow .5s;
 }
+.screen.hot { box-shadow: 0 30px 60px -40px rgba(5, 15, 30, .9), inset 0 0 0 1px rgba(242, 165, 65, .6),
+  0 0 44px -6px rgba(242, 165, 65, .5); }
 .screen-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
 .screen-head h2 { margin: 0; font-size: 14px; font-weight: 600; color: #EEF3F8; }
 .readouts { display: flex; gap: 18px; }
@@ -208,12 +278,16 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
 .track { position: relative; height: 46px; border-radius: 10px; background: var(--surface);
   box-shadow: var(--shadow); overflow: hidden; }
 .track .cursor { position: absolute; top: 6px; bottom: 6px; width: 2px; background: var(--flame);
-  border-radius: 2px; transition: left .5s linear; }
+  border-radius: 2px; transition: left .5s linear; box-shadow: 0 0 10px 1px var(--flame); }
 .capsule { position: absolute; top: 9px; bottom: 9px; border-radius: 6px; background: var(--saffron);
   min-width: 6px; display: flex; align-items: center; justify-content: center;
   color: #1A1206; font: 700 15px/1 var(--font-num); transform-origin: left center;
   animation: grow .6s cubic-bezier(.2,.9,.25,1.1); }
 @keyframes grow { from { transform: scaleX(0); opacity: 0; } }
+.capsule.sounding { background: linear-gradient(90deg, var(--saffron), #FFD48A, var(--saffron)) 0 0 / 200% 100%;
+  box-shadow: 0 0 16px rgba(242, 165, 65, .65);
+  animation: grow .6s cubic-bezier(.2,.9,.25,1.1), shimmer 1.1s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
 .track-axis { display: flex; justify-content: space-between; color: var(--muted); font-size: 12.5px; margin-top: 6px; }
 .log { margin: 16px 0 0; padding: 0; list-style: none; display: grid; }
 .log li { display: grid; grid-template-columns: 110px repeat(3, 1fr); gap: 12px; padding: 10px 2px;
@@ -230,6 +304,22 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
   color: var(--muted); font-size: 14px; display: none; }
 .demo-note.show { display: block; }
 .demo-note code { background: var(--track); padding: 2px 6px; border-radius: 5px; color: var(--ink); }
+
+/* ---------- server offline ---------- */
+.offline { margin-top: 22px; display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: start;
+  padding: 18px 20px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line);
+  box-shadow: var(--shadow); animation: drop .5s cubic-bezier(.2,.9,.25,1.1); }
+.offline .pulse { width: 44px; height: 44px; border-radius: 50%; background: rgba(210, 70, 60, .14);
+  display: grid; place-items: center; position: relative; }
+.offline .pulse::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: #D2463C; }
+.offline .pulse::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid #D2463C;
+  animation: ping 1.8s ease-out infinite; }
+.offline h2 { margin: 0 0 4px; font-size: 17px; }
+.offline p { margin: 0; color: var(--muted); font-size: 14px; }
+.offline .cmd { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+.offline code { font-size: 14px; padding: 8px 12px; border-radius: 8px; background: var(--track); color: var(--ink); }
+.offline .retry { display: flex; gap: 8px; align-items: center; margin-top: 12px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.offline a { color: var(--flame); }
 
 /* ---------- phone alerts ---------- */
 .alerts-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -312,6 +402,7 @@ fieldset:disabled { opacity: .55; }
   .actions { width: 100%; }
   .actions .btn { flex: 1; }
   .count-window { height: 96px; } .count { font-size: 96px; }
+  .gauge-wrap { width: min(76vw, 360px); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important;
@@ -320,11 +411,14 @@ fieldset:disabled { opacity: .55; }
 </style>
 </head>
 <body>
+<div class="aurora" id="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
+<canvas id="embers" aria-hidden="true"></canvas>
+<canvas id="fx" aria-hidden="true"></canvas>
 <div class="shell">
-  <header>
+  <header class="rise">
     <div class="brand">
       <h1 class="wordmark">
-        <svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="15" r="9.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M13 15 L18 10" stroke="var(--saffron)" stroke-width="2.6" stroke-linecap="round"/><path d="M11 2.5h4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="15" r="9.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path class="logo-needle" id="logoNeedle" d="M13 15 L18 10" stroke="var(--saffron)" stroke-width="2.6" stroke-linecap="round"/><path d="M11 2.5h4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
         Resona
       </h1>
       <p>Cooker whistle monitor</p>
@@ -338,10 +432,34 @@ fieldset:disabled { opacity: .55; }
     </div>
   </header>
 
+  <section class="offline" id="offline" hidden aria-live="polite">
+    <div class="pulse" aria-hidden="true"></div>
+    <div>
+      <h2>Resona isn’t running yet</h2>
+      <p>Start the server in a terminal inside the project folder. This page connects by itself as soon as it’s up.</p>
+      <div class="cmd"><code>python -m resona serve</code><button class="btn" type="button" id="copyCmd">Copy</button></div>
+      <div class="retry"><span class="spinner"></span><span>Looking for the server…</span>
+        <span aria-hidden="true">·</span><a href="?demo">Watch a simulated demo instead</a></div>
+    </div>
+  </section>
+
   <main>
-    <section class="gauge-col" aria-label="Whistle count">
-      <div class="gauge-wrap">
+    <section class="gauge-col rise" style="--d:1" aria-label="Whistle count">
+      <div class="gauge-wrap paused" id="gaugeWrap">
+        <canvas id="halo" aria-hidden="true"></canvas>
         <canvas id="steam" aria-hidden="true"></canvas>
+        <div class="weight" id="weight" aria-hidden="true">
+          <svg viewBox="0 0 40 50">
+            <defs><linearGradient id="metal" x1="0" x2="1">
+              <stop offset="0" stop-color="#55616D"/><stop offset=".45" stop-color="#D3DCE4"/><stop offset="1" stop-color="#46515C"/>
+            </linearGradient></defs>
+            <circle cx="20" cy="5" r="4.5" fill="url(#metal)"/>
+            <rect x="18" y="8" width="4" height="5" fill="url(#metal)"/>
+            <path d="M9 40 C9 23 14 13 20 12 C26 13 31 23 31 40 Z" fill="url(#metal)"/>
+            <rect x="6" y="37" width="28" height="6" rx="3" fill="url(#metal)"/>
+            <rect x="16.5" y="43" width="7" height="7" rx="1.5" fill="#3A444E"/>
+          </svg>
+        </div>
         <svg class="gauge" id="gauge" viewBox="0 0 320 320" aria-hidden="true">
           <g id="ticks"></g>
           <g id="segs"></g>
@@ -396,7 +514,7 @@ fieldset:disabled { opacity: .55; }
       </div>
     </section>
 
-    <section class="screen-col">
+    <section class="screen-col rise" style="--d:2">
       <div class="screen">
         <div class="screen-head">
           <h2>Live spectrogram</h2>
@@ -430,8 +548,8 @@ fieldset:disabled { opacity: .55; }
       </div>
 
       <div class="demo-note" id="demoNote">
-        You’re viewing a simulated kitchen. To listen through your microphone, run
-        <code>python -m resona serve</code> and open <code>http://127.0.0.1:8000</code>.
+        You’re watching a simulated demo, not your microphone. To listen for real, run
+        <code>python -m resona serve</code> and open <code>http://127.0.0.1:8000</code> without <code>?demo</code>.
       </div>
     </section>
   </main>
@@ -479,10 +597,10 @@ fieldset:disabled { opacity: .55; }
 
   // ------------------------------------------------------------------ state
   const S = {
-    mode: "connecting",          // connecting | live | demo
+    mode: "connecting",          // connecting | live | offline | demo
     listening: false, source: "microphone", detector: "dsp",
     count: 0, target: 3, sensitivity: 0.5, on: 0.6, off: 0.4,
-    events: [], t: 0, prob: 0, active: false, dismissed: false,
+    events: [], t: 0, prob: 0, active: false, dismissed: false, level: -90, spec: null,
     frameRate: 25, nMels: 64,
   };
   const HISTORY = 300;           // 12 s at 25 frames/s
@@ -526,6 +644,7 @@ fieldset:disabled { opacity: .55; }
       el.classList.toggle("live", S.active && i === S.count - 1);
     });
     $("gauge").classList.toggle("done", S.count >= S.target);
+    $("gaugeWrap").classList.toggle("done", S.count >= S.target);
   }
   function drawThreshold() {
     const deg = START + SWEEP * S.on, [x0, y0] = pt(103, deg), [x1, y1] = pt(121, deg);
@@ -541,6 +660,7 @@ fieldset:disabled { opacity: .55; }
     setTimeout(() => old.remove(), 420);
     const el = document.createElement("span");
     el.className = "count enter"; el.id = "count"; el.textContent = n;
+    el.addEventListener("animationend", () => el.classList.remove("enter"), { once: true });
     win.appendChild(el);
   }
   function setTargetLabel() {
@@ -569,14 +689,143 @@ fieldset:disabled { opacity: .55; }
     const r = steam.getBoundingClientRect();
     sctx.clearRect(0, 0, r.width, r.height);
     if (!reduceMotion && steamRate > 0 && Math.random() < steamRate) spawnPuff(false);
-    const col = getComputedStyle(document.documentElement).getPropertyValue("--steam").trim();
-    const alpha = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--steam-alpha"));
+    const col = theme.steam, alpha = theme.steamAlpha;
     puffs = puffs.filter((p) => p.life > 0);
     for (const p of puffs) {
       p.x += p.vx + Math.sin(p.y / 30) * .35; p.y += p.vy; p.vy *= .992; p.r += p.grow; p.life -= p.decay;
       const g = sctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
       g.addColorStop(0, `rgba(${col}, ${alpha * p.life})`); g.addColorStop(1, `rgba(${col}, 0)`);
       sctx.fillStyle = g; sctx.beginPath(); sctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); sctx.fill();
+    }
+  }
+
+  // ------------------------------------------------------------------ theme colours for canvas drawing
+  let theme = {};
+  const rgb = (hex) => { const h = hex.replace("#", ""); return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)).join(","); };
+  function readTheme() {
+    const cs = getComputedStyle(document.documentElement), v = (n) => cs.getPropertyValue(n).trim();
+    theme = { steam: v("--steam"), steamAlpha: parseFloat(v("--steam-alpha")), mote: v("--mote"),
+      flame: rgb(v("--flame")), saffron: rgb(v("--saffron")), violet: rgb(v("--violet")) };
+  }
+  readTheme();
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", readTheme);
+  const clamp01 = (x) => Math.max(0, Math.min(1, x));
+  const loudness = () => S.listening ? clamp01((S.level + 60) / 45) : 0;
+
+  // ------------------------------------------------------------------ halo: live spectrum ringed around the dial
+  const halo = $("halo"), hctx = halo.getContext("2d");
+  const BARS = 96, barAmp = new Float32Array(BARS), barFloor = new Float32Array(BARS).fill(1);
+  let sweep = 0;
+  function drawHalo(dt) {
+    const w = halo.getBoundingClientRect().width, c = w / 2, k = w / 1.32 / 320;
+    hctx.clearRect(0, 0, w, w);
+    const sp = S.spec, n = sp ? sp.length : 0, live = S.listening;
+    hctx.lineCap = "round";
+    // low frequencies at the bottom, high frequencies (where whistles live) at the top, mirrored left and right
+    for (let i = 0; i < BARS; i++) {
+      const ang = Math.PI / 2 + i / BARS * Math.PI * 2, d = Math.min(i, BARS - i) / (BARS / 2);
+      // each bar measures how far its band rises above that band's own slowly tracked noise floor
+      let target = 0;
+      if (live && n) {
+        const v = sp[Math.min(n - 1, Math.round(d * (n - 1)))];
+        barFloor[i] = v < barFloor[i] ? v : barFloor[i] + (v - barFloor[i]) * .004;
+        target = clamp01((v - barFloor[i] - .04) / .3);
+      }
+      barAmp[i] += (target - barAmp[i]) * (target > barAmp[i] ? .55 : .1);
+      const a = barAmp[i], r0 = 164 * k, r1 = r0 + (2 + a * 34) * k;
+      const col = S.active || a > .75 ? theme.saffron : theme.flame;
+      const cos = Math.cos(ang), sin = Math.sin(ang);
+      hctx.strokeStyle = `rgba(${col},${.25 + a * .75})`; hctx.lineWidth = 2.4 * k;
+      hctx.beginPath(); hctx.moveTo(c + cos * r0, c + sin * r0); hctx.lineTo(c + cos * r1, c + sin * r1); hctx.stroke();
+      if (a > .35) {
+        hctx.strokeStyle = `rgba(${col},${a * .18})`; hctx.lineWidth = 7 * k;
+        hctx.beginPath(); hctx.moveTo(c + cos * r0, c + sin * r0); hctx.lineTo(c + cos * r1, c + sin * r1); hctx.stroke();
+      }
+    }
+    if (!live || reduceMotion) return;
+    // radar sweep circling between the confidence ring and the count segments
+    sweep += dt * (S.active ? 7 : 1.3 + loudness() * 3);
+    const rr = 121 * k, col = S.active ? theme.saffron : theme.flame;
+    for (let j = 0; j < 22; j++) {
+      const a0 = sweep - j * .045;
+      hctx.strokeStyle = `rgba(${col},${(1 - j / 22) * .75})`; hctx.lineWidth = 2.5 * k;
+      hctx.beginPath(); hctx.arc(c, c, rr, a0 - .05, a0); hctx.stroke();
+    }
+    hctx.fillStyle = `rgba(${col},.95)`; hctx.shadowColor = `rgb(${col})`; hctx.shadowBlur = 12;
+    hctx.beginPath(); hctx.arc(c + Math.cos(sweep) * rr, c + Math.sin(sweep) * rr, 3 * k, 0, Math.PI * 2); hctx.fill();
+    hctx.shadowBlur = 0;
+  }
+
+  // ------------------------------------------------------------------ page-wide motion: embers, shockwaves, sparks, confetti
+  const embers = $("embers"), ectx = embers.getContext("2d"), fx = $("fx"), fctx = fx.getContext("2d");
+  let VW = 0, VH = 0, heat = 0, fxDirty = false;
+  let waves = [], sparks = [], confetti = [];
+  const motes = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(),
+    r: .6 + Math.random() * 1.8, s: .15 + Math.random() * .4, ph: Math.random() * 6.28 }));
+  function sizeFx() {
+    const d = Math.min(2, devicePixelRatio || 1); VW = innerWidth; VH = innerHeight;
+    for (const [cv, cx] of [[embers, ectx], [fx, fctx]]) { cv.width = VW * d; cv.height = VH * d; cx.setTransform(d, 0, 0, d, 0, 0); }
+  }
+  function gaugeCenter() { const r = $("gaugeWrap").getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2, r.width / 2]; }
+  function drawEmbers(dt, now) {
+    ectx.clearRect(0, 0, VW, VH);
+    if (reduceMotion) return;
+    heat += ((S.active ? 1 : 0) - heat) * .06;
+    const e = loudness(), speed = (1 + e * 4 + heat * 7) * dt * 60;
+    for (const m of motes) {
+      m.y -= m.s * speed / VH; m.x += Math.sin(now * .0006 + m.ph) * .0004;
+      if (m.y < -.02) { m.y = 1.02; m.x = Math.random(); }
+      const col = heat > .3 ? theme.saffron : theme.mote, a = (.1 + e * .25 + heat * .45) * (.6 + .4 * Math.sin(now * .003 + m.ph));
+      ectx.fillStyle = `rgba(${col},${a})`;
+      ectx.beginPath(); ectx.arc(m.x * VW, m.y * VH, m.r * (1 + heat * .8), 0, 6.283); ectx.fill();
+    }
+  }
+  function whistleFx() {
+    if (reduceMotion) return;
+    const [x, y, r] = gaugeCenter();
+    for (let i = 0; i < 3; i++) waves.push({ x, y, r0: r * .75, t: -i * .14 });
+    for (let i = 0; i < 80; i++) {
+      const a = Math.random() * 6.283, v = 4 + Math.random() * 10;
+      sparks.push({ x: x + Math.cos(a) * r * .8, y: y + Math.sin(a) * r * .8, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+        life: 1, decay: .012 + Math.random() * .02, hot: Math.random() < .7 });
+    }
+    const w = $("gaugeWrap"); w.classList.remove("jolt"); void w.offsetWidth; w.classList.add("jolt");
+  }
+  function confettiFx() {
+    if (reduceMotion) return;
+    const cols = [theme.saffron, theme.flame, theme.violet, "255,212,138", "47,163,107", "235,241,247"];
+    const [gx, gy] = gaugeCenter();
+    const cannons = [[gx, gy, 0, -1, 140], [0, VH, .55, -1, 80], [VW, VH, -.55, -1, 80]];
+    for (const [x, y, dx, dy, n] of cannons) for (let i = 0; i < n; i++) {
+      const v = 9 + Math.random() * 13, spread = (Math.random() - .5) * (x === gx ? 1.6 : .6);
+      confetti.push({ x, y, vx: (dx + spread) * v, vy: dy * v * (.7 + Math.random() * .5),
+        w: 6 + Math.random() * 6, h: 3 + Math.random() * 4, rot: Math.random() * 6.28, vr: (Math.random() - .5) * .4,
+        col: cols[i % cols.length], flip: Math.random() * 6.28 });
+    }
+  }
+  function drawFx(dt) {
+    if (!waves.length && !sparks.length && !confetti.length) { if (fxDirty) { fctx.clearRect(0, 0, VW, VH); fxDirty = false; } return; }
+    fxDirty = true; fctx.clearRect(0, 0, VW, VH);
+    fctx.globalCompositeOperation = "lighter";
+    waves = waves.filter((w) => (w.t += dt) < 1.5);
+    for (const w of waves) {
+      if (w.t < 0) continue;
+      const p = w.t / 1.5, r = w.r0 + (1 - Math.pow(1 - p, 3)) * Math.max(VW, VH) * .55;
+      fctx.strokeStyle = `rgba(${theme.saffron},${(1 - p) * .7})`; fctx.lineWidth = 1 + 5 * (1 - p);
+      fctx.beginPath(); fctx.arc(w.x, w.y, r, 0, 6.283); fctx.stroke();
+    }
+    sparks = sparks.filter((s) => (s.life -= s.decay) > 0);
+    for (const s of sparks) {
+      s.vx *= .955; s.vy = s.vy * .955 + .08; s.x += s.vx; s.y += s.vy;
+      fctx.strokeStyle = `rgba(${s.hot ? theme.saffron : "255,246,226"},${s.life})`; fctx.lineWidth = 2;
+      fctx.beginPath(); fctx.moveTo(s.x, s.y); fctx.lineTo(s.x - s.vx * 2.5, s.y - s.vy * 2.5); fctx.stroke();
+    }
+    fctx.globalCompositeOperation = "source-over";
+    confetti = confetti.filter((p) => p.y < VH + 40 && p.x > -40 && p.x < VW + 40);
+    for (const p of confetti) {
+      p.vx *= .985; p.vy = p.vy * .985 + .32; p.x += p.vx + Math.sin(p.flip) * .8; p.y += p.vy; p.rot += p.vr; p.flip += .15;
+      fctx.save(); fctx.translate(p.x, p.y); fctx.rotate(p.rot); fctx.scale(1, Math.cos(p.flip));
+      fctx.fillStyle = `rgb(${p.col})`; fctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); fctx.restore();
     }
   }
 
@@ -620,11 +869,16 @@ fieldset:disabled { opacity: .55; }
     c.width = Math.max(1, r.width * d); c.height = Math.max(1, r.height * d);
     ctx.setTransform(d, 0, 0, d, 0, 0);
   }
-  function drawScreens() {
+  function drawScreens(now) {
     const r = spec.getBoundingClientRect();
     spctx.imageSmoothingEnabled = true;
     spctx.drawImage(off, 0, 0, r.width, r.height);
     $("faxis").style.height = r.height + "px";
+    if (S.listening) {   // glowing write-head at the "now" edge
+      const x = r.width, c = S.active ? "242,165,65" : "106,149,255", g = spctx.createLinearGradient(x - 22, 0, x, 0);
+      g.addColorStop(0, `rgba(${c},0)`); g.addColorStop(1, `rgba(${c},${.4 + .25 * Math.sin(now * .008)})`);
+      spctx.fillStyle = g; spctx.fillRect(x - 22, 0, 22, r.height);
+    }
 
     const w = conf.getBoundingClientRect().width, h = conf.getBoundingClientRect().height;
     cctx.fillStyle = "#0A1015"; cctx.fillRect(0, 0, w, h);
@@ -640,9 +894,10 @@ fieldset:disabled { opacity: .55; }
     const grad = cctx.createLinearGradient(0, Y(1), 0, Y(0));
     grad.addColorStop(0, "#F2A541"); grad.addColorStop(1 - S.on, "#F2A541"); grad.addColorStop(1 - S.on + .001, "#6A95FF"); grad.addColorStop(1, "#6A95FF");
     cctx.strokeStyle = grad; cctx.lineWidth = 2; cctx.lineJoin = "round";
+    cctx.shadowColor = S.active ? "#F2A541" : "#6A95FF"; cctx.shadowBlur = 8;
     cctx.beginPath();
     for (let i = 0; i < HISTORY; i++) { const x = i * dx, y = Y(probHist[i]); i ? cctx.lineTo(x, y) : cctx.moveTo(x, y); }
-    cctx.stroke();
+    cctx.stroke(); cctx.shadowBlur = 0;
   }
 
   // ------------------------------------------------------------------ timeline
@@ -655,6 +910,7 @@ fieldset:disabled { opacity: .55; }
     track.querySelectorAll(".capsule").forEach((c) => {
       const ev = S.events[+c.dataset.i]; if (!ev) return;
       const end = ev.t_end ?? S.t;
+      c.classList.toggle("sounding", ev.t_end == null);
       c.style.left = (ev.t_start / span * 100) + "%";
       c.style.width = (Math.max(.6, (end - ev.t_start) / span * 100)) + "%";
     });
@@ -684,12 +940,20 @@ fieldset:disabled { opacity: .55; }
     const st = $("status"), txt = $("statusText");
     let mode = "idle", label;
     if (S.mode === "connecting") label = "Connecting…";
+    else if (S.mode === "offline") { mode = "offline"; label = "Server not running"; }
     else if (!S.listening) label = S.mode === "demo" ? "Demo paused" : "Paused";
     else if (S.active) { mode = "whistle"; label = "Whistle detected"; }
-    else { mode = "listening"; label = S.mode === "demo" ? "Listening to a simulated kitchen" : `Listening to ${S.source}`; }
+    else { mode = "listening"; label = S.mode === "demo" ? "Simulated demo" : `Listening to ${S.source}`; }
     st.dataset.mode = mode; txt.textContent = label;
     $("toggleBtn").textContent = S.listening ? "Pause" : "Start listening";
-    steamRate = S.active ? .45 : 0;
+    const usable = S.mode === "live" || S.mode === "demo";
+    $("toggleBtn").disabled = !usable; $("resetBtn").disabled = !usable;
+    const w = $("gaugeWrap");
+    w.classList.toggle("paused", !S.listening);
+    w.classList.toggle("listening", S.listening && !S.active);
+    w.classList.toggle("whistling", S.active);
+    $("aurora").classList.toggle("hot", S.active);
+    document.querySelector(".screen").classList.toggle("hot", S.active);
   }
   function renderControls() {
     setTargetLabel();
@@ -735,14 +999,14 @@ fieldset:disabled { opacity: .55; }
         const wasActive = S.active; S.active = m.active;
         probHist.copyWithin(0, 1); probHist[HISTORY - 1] = m.prob;
         activeHist.copyWithin(0, 1); activeHist[HISTORY - 1] = m.active ? 1 : 0;
-        pushSpecColumn(m.spec);
+        pushSpecColumn(m.spec); S.spec = m.spec; S.level = m.level;
         $("level").textContent = `${Math.round(m.level)} dBFS`;
         if (wasActive !== S.active) { renderStatus(); paintSegments(false); }
         break;
       }
       case "whistle_start": {
         S.count = m.count; S.events.push(m.event); S.active = true;
-        setCount(S.count, true); paintSegments(false); steamBurst(); addCapsule(S.events.length - 1);
+        setCount(S.count, true); paintSegments(false); steamBurst(); whistleFx(); addCapsule(S.events.length - 1);
         renderLog(S.events.length - 1); renderStatus();
         $("announce").textContent = `Whistle ${S.count} of ${S.target}`;
         break;
@@ -755,7 +1019,7 @@ fieldset:disabled { opacity: .55; }
       }
       case "target_reached": {
         $("doneTitle").textContent = `${m.count} whistle${m.count === 1 ? "" : "s"} reached`;
-        $("doneBanner").classList.add("show"); chime();
+        $("doneBanner").classList.add("show"); chime(); confettiFx();
         $("announce").textContent = `${m.count} whistles reached. Time to turn off the stove.`;
         if ("Notification" in window && Notification.permission === "granted")
           new Notification("Resona", { body: `${m.count} whistles reached. Time to turn off the stove.` });
@@ -786,20 +1050,41 @@ fieldset:disabled { opacity: .55; }
     if (S.mode === "live" && ws && ws.readyState === 1) ws.send(JSON.stringify({ cmd, value }));
     else if (S.mode === "demo") sim.command(cmd, value);
   }
+  // The simulated kitchen only runs when asked for with ?demo. Otherwise the page waits for the real
+  // server and keeps retrying, so fake whistles never show up on a dashboard meant for the microphone.
+  const DEFAULT_SERVER = "127.0.0.1:8000";
+  const servedOverHttp = /^https?:$/.test(location.protocol);
+  const candidates = [...new Set([
+    ...(servedOverHttp ? [`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`] : []),
+    `ws://${DEFAULT_SERVER}/ws`,
+  ])];
+  let attempt = 0, retryTimer = null;
   function connect() {
-    if (new URLSearchParams(location.search).has("demo") || !/^https?:$/.test(location.protocol)) return startDemo();
-    let opened = false;
-    try {
-      ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
-    } catch (_) { return startDemo(); }
-    const fallback = setTimeout(() => { if (!opened) { try { ws.close(); } catch (_) {} startDemo(); } }, 1500);
-    ws.onopen = () => { opened = true; clearTimeout(fallback); S.mode = "live"; renderStatus(); loadNotify(); };
-    ws.onmessage = (e) => handle(JSON.parse(e.data));
-    ws.onerror = () => { if (!opened) { clearTimeout(fallback); startDemo(); } };
-    ws.onclose = () => {
-      if (opened && S.mode === "live") { S.mode = "connecting"; renderStatus(); toast("Lost connection to the Resona server. Reconnecting…"); setTimeout(connect, 2000); }
+    if (new URLSearchParams(location.search).has("demo")) return startDemo();
+    const url = candidates[attempt++ % candidates.length];
+    let sock;
+    try { sock = new WebSocket(url); } catch (_) { return goOffline(); }
+    sock.onopen = () => {
+      const host = new URL(url.replace(/^ws/, "http")).host;
+      // page was opened from a file or another server: jump to the dashboard the Python server hosts
+      if (!servedOverHttp || host !== location.host) { location.href = `http://${host}/`; return; }
+      ws = sock; S.mode = "live"; $("offline").hidden = true; renderStatus(); loadNotify();
+    };
+    sock.onmessage = (e) => { if (ws === sock) handle(JSON.parse(e.data)); };
+    sock.onclose = () => {
+      if (ws === sock) { ws = null; toast("Lost connection to the Resona server. Reconnecting…"); }
+      goOffline();
     };
   }
+  function goOffline() {
+    S.mode = "offline"; S.listening = false; S.active = false; S.prob = 0;
+    $("offline").hidden = false; renderStatus();
+    clearTimeout(retryTimer); retryTimer = setTimeout(connect, 2000);
+  }
+  $("copyCmd").onclick = (e) => {
+    navigator.clipboard.writeText("python -m resona serve").catch(() => {});
+    e.target.textContent = "Copied"; setTimeout(() => { e.target.textContent = "Copy"; }, 1600);
+  };
   function startDemo() {
     if (S.mode === "demo") return;
     S.mode = "demo"; S.source = "simulated kitchen"; $("demoNote").classList.add("show");
@@ -1041,18 +1326,30 @@ fieldset:disabled { opacity: .55; }
   };
 
   // ------------------------------------------------------------------ render loop
-  let shownProb = 0, lastTimeline = 0;
+  let shownProb = 0, lastTimeline = 0, lastNow = performance.now();
   function loop(now) {
-    shownProb += (S.prob - shownProb) * .25;
+    const dt = Math.min(.05, (now - lastNow) / 1000); lastNow = now;
+    shownProb += ((S.listening ? S.prob : 0) - shownProb) * .25;
     const arcEl = $("confArc");
     arcEl.style.strokeDashoffset = 100 - shownProb * 100;
     arcEl.classList.toggle("hot", shownProb >= S.on);
     $("confPct").textContent = Math.round(shownProb * 100) + "%";
-    drawScreens(); drawSteam();
+
+    // the cooker weight rattles as confidence climbs and dances while a whistle sounds
+    steamRate = reduceMotion ? 0 : S.active ? .55 : S.listening ? .015 + shownProb * .3 : 0;
+    if (!reduceMotion) {
+      const jig = S.active ? 1 : S.listening ? Math.min(1, shownProb * 1.3) * .5 : 0;
+      const ang = (Math.sin(now * .045) * 9 + Math.sin(now * .093) * 4) * jig;
+      const hop = S.active ? Math.abs(Math.sin(now * .03)) * 4 : 0;
+      $("weight").style.transform = `translateX(-50%) translateY(${-hop}px) rotate(${ang}deg)`;
+      $("logoNeedle").style.transform = `rotate(${(shownProb - .5) * 140}deg)`;
+    }
+
+    drawScreens(now); drawSteam(); drawHalo(dt); drawEmbers(dt, now); drawFx(dt);
     if (now - lastTimeline > 250) { renderTimeline(); lastTimeline = now; }
     requestAnimationFrame(loop);
   }
-  function resize() { sizeCanvas(spec, spctx); sizeCanvas(conf, cctx); sizeSteam(); }
+  function resize() { sizeCanvas(spec, spctx); sizeCanvas(conf, cctx); sizeCanvas(halo, hctx); sizeSteam(); sizeFx(); }
   addEventListener("resize", resize);
   resize(); drawSegments(); renderControls(); renderStatus(); renderLog(-1);
   requestAnimationFrame(loop);
