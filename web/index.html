@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Resona · Cooker whistle monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #E4E8EC;
+  --surface: #F2F4F6;
+  --ink: #16202A;
+  --muted: #5A6774;
+  --line: #C9D0D7;
+  --flame: #2C63E8;
+  --saffron: #DD861A;
+  --saffron-soft: rgba(221, 134, 26, .16);
+  --screen: #0D141A;
+  --screen-line: rgba(255, 255, 255, .08);
+  --screen-ink: rgba(235, 241, 247, .62);
+  --steam: 255, 255, 255;
+  --steam-alpha: .55;
+  --track: rgba(22, 32, 42, .10);
+  --shadow: 0 1px 0 rgba(255,255,255,.7) inset, 0 14px 40px -24px rgba(16, 28, 44, .45);
+  --font-ui: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-num: "Big Shoulders Display", "Arial Narrow", "Roboto Condensed", sans-serif;
+  color-scheme: light;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F161D; --surface: #16202A; --ink: #E4EAF0; --muted: #8796A4; --line: #273441;
+    --flame: #6A95FF; --saffron: #F2A541; --saffron-soft: rgba(242, 165, 65, .14);
+    --screen: #0A1015; --track: rgba(228, 234, 240, .08);
+    --steam: 214, 226, 238; --steam-alpha: .35;
+    --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 18px 40px -26px rgba(0,0,0,.8);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F161D; --surface: #16202A; --ink: #E4EAF0; --muted: #8796A4; --line: #273441;
+  --flame: #6A95FF; --saffron: #F2A541; --saffron-soft: rgba(242, 165, 65, .14);
+  --screen: #0A1015; --track: rgba(228, 234, 240, .08);
+  --steam: 214, 226, 238; --steam-alpha: .35;
+  --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 18px 40px -26px rgba(0,0,0,.8);
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: inherit; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 400 15px/1.5 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--flame); outline-offset: 3px; border-radius: 6px; }
+
+.shell { max-width: 1240px; margin: 0 auto; padding: 22px 28px 40px; }
+
+/* ---------- header ---------- */
+header {
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  padding-bottom: 18px; border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: baseline; gap: 12px; margin-right: auto; }
+.wordmark {
+  font: 800 30px/1 var(--font-num); letter-spacing: .02em; margin: 0;
+  display: flex; align-items: center; gap: 10px;
+}
+.wordmark svg { width: 26px; height: 26px; }
+.brand p { margin: 0; color: var(--muted); font-size: 14px; }
+.status {
+  display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 12px;
+  border-radius: 999px; background: var(--surface); box-shadow: var(--shadow);
+  font-size: 14px; font-weight: 500;
+}
+.status .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); position: relative; }
+.status[data-mode="listening"] .dot { background: var(--flame); }
+.status[data-mode="listening"] .dot::after {
+  content: ""; position: absolute; inset: -5px; border-radius: 50%;
+  border: 2px solid var(--flame); opacity: 0; animation: ping 1.8s ease-out infinite;
+}
+.status[data-mode="whistle"] .dot { background: var(--saffron); }
+@keyframes ping { 0% { transform: scale(.5); opacity: .8; } 100% { transform: scale(1.6); opacity: 0; } }
+.actions { display: flex; gap: 10px; }
+.btn {
+  border: 1px solid var(--line); background: transparent; border-radius: 10px;
+  padding: 9px 16px; font-weight: 600; cursor: pointer;
+  transition: background .2s, border-color .2s, transform .1s;
+}
+.btn:hover { border-color: var(--muted); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); min-width: 148px; }
+.btn.primary:hover { opacity: .9; }
+
+/* ---------- main grid ---------- */
+main {
+  display: grid; grid-template-columns: minmax(330px, 400px) 1fr; gap: 36px; padding-top: 30px;
+}
+.gauge-col { display: flex; flex-direction: column; align-items: center; gap: 26px; padding-top: 70px; }
+
+/* gauge */
+.gauge-wrap { position: relative; width: min(100%, 360px); aspect-ratio: 1; }
+#steam { position: absolute; left: -20%; width: 140%; bottom: 93%; height: 70%; pointer-events: none; }
+.gauge { width: 100%; height: 100%; display: block; overflow: visible; }
+.gauge .tick { stroke: var(--line); stroke-width: 1.5; }
+.gauge .tick.major { stroke: var(--muted); stroke-width: 2; }
+.gauge .seg { fill: none; stroke: var(--track); stroke-width: 16; stroke-linecap: butt; }
+.gauge .seg-fill {
+  fill: none; stroke: var(--saffron); stroke-width: 16;
+  stroke-dasharray: 100; stroke-dashoffset: 100;
+  transition: stroke-dashoffset .9s cubic-bezier(.22, 1.4, .36, 1);
+}
+.gauge .seg-fill.on { stroke-dashoffset: 0; }
+.gauge .seg-fill.live { animation: breathe 1.1s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: .55; } }
+.gauge.done .seg-fill { filter: drop-shadow(0 0 7px var(--saffron)); }
+.gauge .conf-track { fill: none; stroke: var(--track); stroke-width: 5; stroke-linecap: round; }
+.gauge .conf { fill: none; stroke: var(--flame); stroke-width: 5; stroke-linecap: round;
+  stroke-dasharray: 100; stroke-dashoffset: 100; }
+.gauge .conf.hot { stroke: var(--saffron); }
+.gauge .thresh { stroke: var(--ink); stroke-width: 2.5; stroke-linecap: round; }
+.gauge-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center; pointer-events: none;
+}
+.count-window { height: 118px; overflow: hidden; position: relative; width: 100%; }
+.count {
+  font: 800 118px/1 var(--font-num); display: block; position: absolute; width: 100%;
+  letter-spacing: -.01em;
+}
+.count.enter { animation: rollIn .55s cubic-bezier(.2, .9, .25, 1.15) both; }
+.count.exit { animation: rollOut .4s ease-in both; }
+@keyframes rollIn { from { transform: translateY(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes rollOut { to { transform: translateY(-80%); opacity: 0; } }
+.count-label { color: var(--muted); font-size: 15px; margin-top: 2px; }
+.conf-readout { margin-top: 14px; font-size: 13px; color: var(--muted); }
+.conf-readout b { color: var(--ink); font-weight: 600; }
+
+/* done banner */
+.done-banner {
+  width: 100%; border-radius: 14px; padding: 14px 16px; display: none;
+  background: var(--saffron-soft); border: 1px solid var(--saffron);
+  align-items: center; gap: 14px;
+}
+.done-banner.show { display: flex; animation: drop .5s cubic-bezier(.2,.9,.25,1.1); }
+@keyframes drop { from { transform: translateY(-10px); opacity: 0; } }
+.done-banner p { margin: 0; flex: 1; font-weight: 500; }
+.done-banner strong { display: block; font-size: 17px; }
+
+/* controls */
+.controls { width: 100%; display: grid; gap: 20px; }
+.control { display: grid; gap: 8px; }
+.control-head { display: flex; justify-content: space-between; align-items: baseline; }
+.control-head label, .control-head span.lbl { font-weight: 600; font-size: 14px; }
+.control-head small { color: var(--muted); font-size: 13px; }
+.stepper { display: flex; align-items: center; gap: 0; border: 1px solid var(--line);
+  border-radius: 12px; overflow: hidden; width: max-content; }
+.stepper-row { display: flex; align-items: center; gap: 12px; color: var(--muted); }
+.stepper button { width: 46px; height: 42px; border: 0; background: transparent; cursor: pointer; font-size: 20px; }
+.stepper button:hover { background: var(--track); }
+.stepper output { color: var(--ink); min-width: 56px; text-align: center; font: 700 26px/1 var(--font-num); }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px;
+  background: var(--track); border-radius: 6px; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px;
+  border-radius: 50%; background: var(--surface); border: 2px solid var(--ink); cursor: pointer; }
+input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%;
+  background: var(--surface); border: 2px solid var(--ink); cursor: pointer; }
+.scale-ends { display: flex; justify-content: space-between; color: var(--muted); font-size: 12.5px; }
+.segmented { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; gap: 4px;
+  background: var(--track); border-radius: 12px; }
+.segmented button { border: 0; border-radius: 9px; padding: 9px 10px; background: transparent;
+  cursor: pointer; font-weight: 500; color: var(--muted); transition: background .25s, color .25s; }
+.segmented button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+
+/* ---------- instrument screen ---------- */
+.screen-col { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+.screen {
+  background: var(--screen); border-radius: 18px; padding: 18px 18px 14px;
+  box-shadow: 0 30px 60px -40px rgba(5, 15, 30, .9), inset 0 0 0 1px var(--screen-line);
+  color: var(--screen-ink); font-size: 12.5px;
+}
+.screen-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.screen-head h2 { margin: 0; font-size: 14px; font-weight: 600; color: #EEF3F8; }
+.readouts { display: flex; gap: 18px; }
+.readouts b { color: #EEF3F8; font-weight: 600; }
+.spec-area { display: grid; grid-template-columns: 34px 1fr; gap: 8px; }
+.faxis { position: relative; }
+.faxis span { position: absolute; right: 0; transform: translateY(-50%); }
+.spec-stack { position: relative; min-width: 0; }
+#spec { width: 100%; height: 260px; display: block; border-radius: 8px; }
+#confCanvas { width: 100%; height: 84px; display: block; margin-top: 10px; border-radius: 8px; }
+.taxis { display: flex; justify-content: space-between; margin-top: 6px; padding-left: 42px; }
+.conf-legend { display: flex; gap: 16px; margin-top: 10px; padding-left: 42px; flex-wrap: wrap; }
+.conf-legend i { display: inline-block; width: 18px; height: 0; vertical-align: middle; margin-right: 6px; }
+.conf-legend .l1 { border-top: 2px solid #6A95FF; }
+.conf-legend .l2 { border-top: 2px dashed rgba(255,255,255,.45); }
+.conf-legend .l3 { height: 8px; background: rgba(242,165,65,.5); border-radius: 2px; }
+
+/* ---------- timeline ---------- */
+.timeline h2 { margin: 0 0 4px; font-size: 17px; font-weight: 600; }
+.timeline .sub { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+.track { position: relative; height: 46px; border-radius: 10px; background: var(--surface);
+  box-shadow: var(--shadow); overflow: hidden; }
+.track .cursor { position: absolute; top: 6px; bottom: 6px; width: 2px; background: var(--flame);
+  border-radius: 2px; transition: left .5s linear; }
+.capsule { position: absolute; top: 9px; bottom: 9px; border-radius: 6px; background: var(--saffron);
+  min-width: 6px; display: flex; align-items: center; justify-content: center;
+  color: #1A1206; font: 700 15px/1 var(--font-num); transform-origin: left center;
+  animation: grow .6s cubic-bezier(.2,.9,.25,1.1); }
+@keyframes grow { from { transform: scaleX(0); opacity: 0; } }
+.track-axis { display: flex; justify-content: space-between; color: var(--muted); font-size: 12.5px; margin-top: 6px; }
+.log { margin: 16px 0 0; padding: 0; list-style: none; display: grid; }
+.log li { display: grid; grid-template-columns: 110px repeat(3, 1fr); gap: 12px; padding: 10px 2px;
+  border-bottom: 1px solid var(--line); font-size: 14px; }
+.log li:first-child { border-top: 1px solid var(--line); }
+.log li span:first-child { font-weight: 600; }
+.log li span { color: var(--muted); }
+.log li span:first-child { color: var(--ink); }
+.log li.new { animation: flash 1.6s ease-out; }
+@keyframes flash { from { background: var(--saffron-soft); } }
+.empty { color: var(--muted); padding: 14px 2px; border-top: 1px solid var(--line); margin-top: 16px; }
+
+.demo-note { margin-top: 26px; padding: 14px 16px; border-radius: 12px; border: 1px dashed var(--line);
+  color: var(--muted); font-size: 14px; display: none; }
+.demo-note.show { display: block; }
+.demo-note code { background: var(--track); padding: 2px 6px; border-radius: 5px; color: var(--ink); }
+
+/* ---------- phone alerts ---------- */
+.alerts-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--line); font-size: 13.5px; color: var(--muted); }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.chip[data-on="true"] { color: var(--ink); border-color: var(--ink); }
+.chip[data-on="true"]::before { background: #2FA36B; }
+.btn.wide { width: 100%; }
+dialog.sheet { border: 0; padding: 0; border-radius: 20px; width: min(560px, calc(100vw - 24px));
+  max-height: calc(100dvh - 32px); background: var(--surface); color: var(--ink);
+  box-shadow: 0 40px 80px -30px rgba(5, 15, 30, .55); }
+dialog.sheet::backdrop { background: rgba(10, 16, 22, .55); backdrop-filter: blur(3px); }
+dialog.sheet[open] { animation: sheetIn .35s cubic-bezier(.2,.9,.25,1.05); }
+@keyframes sheetIn { from { transform: translateY(16px) scale(.98); opacity: 0; } }
+.sheet-inner { padding: 22px 24px 22px; display: grid; gap: 18px; }
+.sheet-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+.sheet-head h2 { margin: 0; font-size: 20px; }
+.sheet-head p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.icon-btn { border: 0; background: var(--track); width: 34px; height: 34px; border-radius: 50%;
+  cursor: pointer; font-size: 18px; line-height: 1; flex: none; }
+.panel { display: grid; gap: 14px; font-size: 14.5px; }
+.panel[hidden], [hidden] { display: none !important; }
+.panel ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.panel p { margin: 0; }
+.field { display: flex; gap: 8px; }
+.field input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--bg); font-size: 14px; }
+.field input:focus { outline: 2px solid var(--flame); outline-offset: 0; border-color: transparent; }
+.link-card { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center;
+  padding: 14px; border-radius: 14px; background: var(--bg); }
+.qr { width: 132px; height: 132px; border-radius: 10px; background: #fff; padding: 6px; display: grid; place-items: center; }
+.qr img, .qr canvas { width: 120px !important; height: 120px !important; }
+.qr.missing { display: none; }
+.link-card .stack { display: grid; gap: 10px; min-width: 0; }
+.topic { font: 600 15px/1.3 var(--font-ui); word-break: break-all; padding: 8px 10px; border-radius: 8px;
+  background: var(--surface); border: 1px dashed var(--line); }
+.btn.link { display: inline-flex; justify-content: center; text-decoration: none; color: var(--ink); }
+.waiting { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; }
+.spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line);
+  border-top-color: var(--flame); animation: spin .9s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.ok-line { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 12px;
+  background: rgba(47, 163, 107, .12); border: 1px solid rgba(47, 163, 107, .5); }
+.ok-line::before { content: "✓"; font-weight: 700; color: #2FA36B; }
+.ok-line span { flex: 1; }
+.form-error { color: #D2463C; font-size: 13.5px; margin: 0; }
+.form-error:empty { display: none; }
+.fine { color: var(--muted); font-size: 13px; }
+.textbtn { border: 0; background: none; padding: 0; color: var(--muted); text-decoration: underline;
+  cursor: pointer; font-size: 13.5px; justify-self: start; }
+.sheet-foot { display: grid; gap: 12px; border-top: 1px solid var(--line); padding-top: 16px; }
+.check { display: flex; gap: 10px; align-items: center; font-size: 14px; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--flame); }
+.foot-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.foot-row .result { color: var(--muted); font-size: 13.5px; flex: 1; }
+.demo-callout { padding: 12px 14px; border-radius: 12px; background: var(--saffron-soft);
+  border: 1px solid var(--saffron); font-size: 14px; }
+.demo-callout code { background: var(--track); padding: 1px 5px; border-radius: 4px; }
+fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+fieldset:disabled { opacity: .55; }
+
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  transform: translate(-50%, 20px); opacity: 0; pointer-events: none; max-width: min(92vw, 520px);
+  background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 12px; font-size: 14px;
+  transition: opacity .25s, transform .25s; z-index: 20; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 900px) {
+  .gauge-col { padding-top: 56px; }
+  .shell { padding: 16px 16px 32px; }
+  main { grid-template-columns: 1fr; gap: 30px; }
+  #spec { height: 200px; }
+  .brand p { display: none; }
+  .log li { grid-template-columns: 90px 1fr 1fr; }
+  .log li span:last-child { display: none; }
+}
+@media (max-width: 520px) {
+  .actions { width: 100%; }
+  .actions .btn { flex: 1; }
+  .count-window { height: 96px; } .count { font-size: 96px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="brand">
+      <h1 class="wordmark">
+        <svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="15" r="9.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M13 15 L18 10" stroke="var(--saffron)" stroke-width="2.6" stroke-linecap="round"/><path d="M11 2.5h4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        Resona
+      </h1>
+      <p>Cooker whistle monitor</p>
+    </div>
+    <div class="status" id="status" data-mode="idle" role="status">
+      <span class="dot"></span><span id="statusText">Connecting…</span>
+    </div>
+    <div class="actions">
+      <button class="btn" id="resetBtn" type="button">New session</button>
+      <button class="btn primary" id="toggleBtn" type="button">Start listening</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="gauge-col" aria-label="Whistle count">
+      <div class="gauge-wrap">
+        <canvas id="steam" aria-hidden="true"></canvas>
+        <svg class="gauge" id="gauge" viewBox="0 0 320 320" aria-hidden="true">
+          <g id="ticks"></g>
+          <g id="segs"></g>
+          <path class="conf-track" id="confTrack"/>
+          <path class="conf" id="confArc" pathLength="100"/>
+          <line class="thresh" id="thresh"/>
+        </svg>
+        <div class="gauge-center">
+          <div class="count-window"><span class="count" id="count">0</span></div>
+          <div class="count-label" id="countLabel">of 3 whistles</div>
+          <div class="conf-readout">Whistle confidence <b id="confPct">0%</b></div>
+        </div>
+      </div>
+
+      <div class="done-banner" id="doneBanner" role="alert">
+        <p><strong id="doneTitle">3 whistles reached</strong>Time to turn off the stove.</p>
+        <button class="btn" id="dismissBtn" type="button">Dismiss</button>
+      </div>
+
+      <div class="controls">
+        <div class="control">
+          <div class="control-head"><span class="lbl" id="targetLbl">Alert me after</span></div>
+          <div class="stepper-row">
+            <div class="stepper" role="group" aria-labelledby="targetLbl">
+              <button type="button" id="minus" aria-label="Fewer whistles">−</button>
+              <output id="target" aria-live="polite">3</output>
+              <button type="button" id="plus" aria-label="More whistles">+</button>
+            </div>
+            <span id="targetUnit">whistles</span>
+          </div>
+        </div>
+        <div class="control">
+          <div class="control-head"><label for="sens">Sensitivity</label><small id="sensText">Balanced</small></div>
+          <input type="range" id="sens" min="0" max="1" step="0.05" value="0.5">
+          <div class="scale-ends"><span>Fewer false alarms</span><span>Catch faint whistles</span></div>
+        </div>
+        <div class="control">
+          <div class="control-head"><span class="lbl" id="detLbl">Detection method</span></div>
+          <div class="segmented" role="group" aria-labelledby="detLbl">
+            <button type="button" data-det="dsp" aria-pressed="true">Signal rules</button>
+            <button type="button" data-det="cnn" aria-pressed="false">Neural network</button>
+          </div>
+        </div>
+        <div class="control">
+          <div class="control-head"><span class="lbl">Phone alerts</span><small id="alertsSummary">Off</small></div>
+          <div class="alerts-row">
+            <span class="chip" id="chipTelegram" data-on="false">Telegram</span>
+            <span class="chip" id="chipNtfy" data-on="false">ntfy app</span>
+          </div>
+          <button class="btn wide" type="button" id="alertsBtn">Set up phone alerts</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen-col">
+      <div class="screen">
+        <div class="screen-head">
+          <h2>Live spectrogram</h2>
+          <div class="readouts">
+            <span>Level <b id="level">–</b></span>
+            <span>Session <b id="clock">0:00</b></span>
+          </div>
+        </div>
+        <div class="spec-area">
+          <div class="faxis" id="faxis"></div>
+          <div class="spec-stack">
+            <canvas id="spec"></canvas>
+            <canvas id="confCanvas"></canvas>
+          </div>
+        </div>
+        <div class="taxis"><span>12 s ago</span><span>now</span></div>
+        <div class="conf-legend">
+          <span><i class="l1"></i>Whistle confidence</span>
+          <span><i class="l2"></i>Trigger level</span>
+          <span><i class="l3"></i>Counted whistle</span>
+        </div>
+      </div>
+
+      <div class="timeline">
+        <h2>This session</h2>
+        <p class="sub" id="sessionSub">Each bar is one whistle, sized by how long it lasted.</p>
+        <div class="track" id="track"><div class="cursor" id="cursor" style="left:0"></div></div>
+        <div class="track-axis"><span>0:00</span><span id="trackEnd">1:00</span></div>
+        <ul class="log" id="log"></ul>
+        <div class="empty" id="empty">Whistles will appear here as they’re heard.</div>
+      </div>
+
+      <div class="demo-note" id="demoNote">
+        You’re viewing a simulated kitchen. To listen through your microphone, run
+        <code>python -m resona serve</code> and open <code>http://127.0.0.1:8000</code>.
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog class="sheet" id="alertsDialog" aria-labelledby="alertsTitle">
+  <div class="sheet-inner">
+    <div class="sheet-head">
+      <div>
+        <h2 id="alertsTitle">Phone alerts</h2>
+        <p>Get a message when the cooker whistles, even from another room.</p>
+      </div>
+      <button class="icon-btn" type="button" id="alertsClose" aria-label="Close">×</button>
+    </div>
+    <div class="demo-callout" id="alertsDemo" hidden>
+      Alerts are sent by the Python server on your computer. Run <code>python -m resona serve</code>,
+      open the dashboard it prints, and set them up here.
+    </div>
+    <div class="segmented" role="tablist" aria-label="Alert channel">
+      <button type="button" role="tab" data-tab="telegram" aria-pressed="true">Telegram</button>
+      <button type="button" role="tab" data-tab="ntfy" aria-pressed="false">ntfy app</button>
+    </div>
+    <fieldset id="alertsFields">
+      <div class="panel" id="panelTelegram"></div>
+      <div class="panel" id="panelNtfy" hidden></div>
+    </fieldset>
+    <div class="sheet-foot">
+      <label class="check"><input type="checkbox" id="eachWhistle" checked> Alert on every whistle, not just the last one</label>
+      <div class="foot-row">
+        <button class="btn" type="button" id="testAlert">Send test alert</button>
+        <span class="result" id="testResult"></span>
+      </div>
+    </div>
+  </div>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+<div class="sr-only" aria-live="assertive" id="announce"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ------------------------------------------------------------------ state
+  const S = {
+    mode: "connecting",          // connecting | live | demo
+    listening: false, source: "microphone", detector: "dsp",
+    count: 0, target: 3, sensitivity: 0.5, on: 0.6, off: 0.4,
+    events: [], t: 0, prob: 0, active: false, dismissed: false,
+    frameRate: 25, nMels: 64,
+  };
+  const HISTORY = 300;           // 12 s at 25 frames/s
+  const probHist = new Float32Array(HISTORY);
+  const activeHist = new Uint8Array(HISTORY);
+
+  // ------------------------------------------------------------------ gauge geometry
+  const CX = 160, CY = 160, START = 135, SWEEP = 270;
+  const pt = (r, deg) => { const a = deg * Math.PI / 180; return [CX + r * Math.cos(a), CY + r * Math.sin(a)]; };
+  const arc = (r, a0, a1) => {
+    const [x0, y0] = pt(r, a0), [x1, y1] = pt(r, a1);
+    return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+  };
+  (function drawTicks() {
+    let html = "";
+    for (let i = 0; i <= 54; i++) {
+      const deg = START + SWEEP * i / 54, major = i % 9 === 0;
+      const [x0, y0] = pt(major ? 150 : 153, deg), [x1, y1] = pt(158, deg);
+      html += `<line class="tick${major ? " major" : ""}" x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}"/>`;
+    }
+    $("ticks").innerHTML = html;
+    $("confTrack").setAttribute("d", arc(112, START, START + SWEEP));
+    $("confArc").setAttribute("d", arc(112, START, START + SWEEP));
+  })();
+
+  function drawSegments() {
+    const n = S.target, gap = n > 1 ? 4 : 0, each = (SWEEP - gap * (n - 1)) / n;
+    let html = "";
+    for (let i = 0; i < n; i++) {
+      const a0 = START + i * (each + gap), a1 = a0 + each, d = arc(136, a0, a1);
+      html += `<path class="seg" d="${d}"/><path class="seg-fill" data-i="${i}" pathLength="100" d="${d}"/>`;
+    }
+    $("segs").innerHTML = html;
+    paintSegments(true);
+  }
+  function paintSegments(instant) {
+    document.querySelectorAll(".seg-fill").forEach((el) => {
+      const i = +el.dataset.i;
+      if (instant) { el.style.transition = "none"; requestAnimationFrame(() => el.style.transition = ""); }
+      el.classList.toggle("on", i < S.count);
+      el.classList.toggle("live", S.active && i === S.count - 1);
+    });
+    $("gauge").classList.toggle("done", S.count >= S.target);
+  }
+  function drawThreshold() {
+    const deg = START + SWEEP * S.on, [x0, y0] = pt(103, deg), [x1, y1] = pt(121, deg);
+    const t = $("thresh");
+    t.setAttribute("x1", x0); t.setAttribute("y1", y0); t.setAttribute("x2", x1); t.setAttribute("y2", y1);
+  }
+
+  // ------------------------------------------------------------------ count roll
+  function setCount(n, animate) {
+    const win = document.querySelector(".count-window"), old = $("count");
+    if (!animate || reduceMotion) { old.textContent = n; return; }
+    old.removeAttribute("id"); old.classList.remove("enter"); old.classList.add("exit");
+    setTimeout(() => old.remove(), 420);
+    const el = document.createElement("span");
+    el.className = "count enter"; el.id = "count"; el.textContent = n;
+    win.appendChild(el);
+  }
+  function setTargetLabel() {
+    $("target").value = S.target; $("target").textContent = S.target;
+    $("targetUnit").textContent = S.target === 1 ? "whistle" : "whistles";
+    $("countLabel").textContent = `of ${S.target} whistle${S.target === 1 ? "" : "s"}`;
+  }
+
+  // ------------------------------------------------------------------ steam particles
+  const steam = $("steam"), sctx = steam.getContext("2d");
+  let puffs = [], steamRate = 0;
+  function sizeSteam() {
+    const r = steam.getBoundingClientRect(), d = devicePixelRatio || 1;
+    steam.width = r.width * d; steam.height = r.height * d; sctx.setTransform(d, 0, 0, d, 0, 0);
+  }
+  function spawnPuff(burst) {
+    const r = steam.getBoundingClientRect();
+    puffs.push({
+      x: r.width / 2 + (Math.random() - .5) * 26, y: r.height - 8,
+      vx: (Math.random() - .5) * (burst ? 1.6 : .7), vy: -(burst ? 2.4 : 1.3) - Math.random() * 1.4,
+      r: 6 + Math.random() * 8, grow: .35 + Math.random() * .35, life: 1, decay: .006 + Math.random() * .006,
+    });
+  }
+  function steamBurst() { if (!reduceMotion) for (let i = 0; i < 46; i++) spawnPuff(true); }
+  function drawSteam() {
+    const r = steam.getBoundingClientRect();
+    sctx.clearRect(0, 0, r.width, r.height);
+    if (!reduceMotion && steamRate > 0 && Math.random() < steamRate) spawnPuff(false);
+    const col = getComputedStyle(document.documentElement).getPropertyValue("--steam").trim();
+    const alpha = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--steam-alpha"));
+    puffs = puffs.filter((p) => p.life > 0);
+    for (const p of puffs) {
+      p.x += p.vx + Math.sin(p.y / 30) * .35; p.y += p.vy; p.vy *= .992; p.r += p.grow; p.life -= p.decay;
+      const g = sctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      g.addColorStop(0, `rgba(${col}, ${alpha * p.life})`); g.addColorStop(1, `rgba(${col}, 0)`);
+      sctx.fillStyle = g; sctx.beginPath(); sctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); sctx.fill();
+    }
+  }
+
+  // ------------------------------------------------------------------ spectrogram
+  const spec = $("spec"), spctx = spec.getContext("2d");
+  const off = document.createElement("canvas"); off.width = HISTORY; off.height = 64;
+  const octx = off.getContext("2d");
+  octx.fillStyle = "#0A1015"; octx.fillRect(0, 0, HISTORY, 64);
+  const LUT = (() => {
+    const stops = [[0, [10, 16, 21]], [.32, [24, 52, 120]], [.58, [74, 128, 255]], [.8, [242, 165, 65]], [1, [255, 246, 226]]];
+    const out = new Uint8ClampedArray(256 * 3);
+    for (let i = 0; i < 256; i++) {
+      const v = i / 255; let k = 0; while (k < stops.length - 2 && v > stops[k + 1][0]) k++;
+      const [a, ca] = stops[k], [b, cb] = stops[k + 1], f = (v - a) / (b - a);
+      for (let c = 0; c < 3; c++) out[i * 3 + c] = ca[c] + (cb[c] - ca[c]) * f;
+    }
+    return out;
+  })();
+  const col = octx.createImageData(1, 64);
+  function pushSpecColumn(values) {
+    octx.drawImage(off, -1, 0);
+    const n = values.length;
+    for (let y = 0; y < 64; y++) {
+      const v = values[Math.min(n - 1, Math.floor((63 - y) * n / 64))];
+      const idx = Math.max(0, Math.min(255, Math.round(v * 255))) * 3, o = y * 4;
+      col.data[o] = LUT[idx]; col.data[o + 1] = LUT[idx + 1]; col.data[o + 2] = LUT[idx + 2]; col.data[o + 3] = 255;
+    }
+    octx.putImageData(col, HISTORY - 1, 0);
+  }
+  // mel-scale frequency labels matching the Python feature extractor (50 Hz to 8 kHz)
+  (function freqAxis() {
+    const mel = (f) => 2595 * Math.log10(1 + f / 700), lo = mel(50), hi = mel(8000);
+    $("faxis").innerHTML = [[500, "500"], [1000, "1k"], [2000, "2k"], [4000, "4k"], [8000, "8k"]]
+      .map(([f, l]) => `<span style="top:${(1 - (mel(f) - lo) / (hi - lo)) * 100}%">${l}</span>`).join("");
+    $("faxis").style.height = "260px";
+  })();
+
+  const conf = $("confCanvas"), cctx = conf.getContext("2d");
+  function sizeCanvas(c, ctx) {
+    const r = c.getBoundingClientRect(), d = devicePixelRatio || 1;
+    c.width = Math.max(1, r.width * d); c.height = Math.max(1, r.height * d);
+    ctx.setTransform(d, 0, 0, d, 0, 0);
+  }
+  function drawScreens() {
+    const r = spec.getBoundingClientRect();
+    spctx.imageSmoothingEnabled = true;
+    spctx.drawImage(off, 0, 0, r.width, r.height);
+    $("faxis").style.height = r.height + "px";
+
+    const w = conf.getBoundingClientRect().width, h = conf.getBoundingClientRect().height;
+    cctx.fillStyle = "#0A1015"; cctx.fillRect(0, 0, w, h);
+    const dx = w / (HISTORY - 1), pad = 6, Y = (p) => h - pad - p * (h - pad * 2);
+    cctx.fillStyle = "rgba(242,165,65,.28)";
+    for (let i = 0; i < HISTORY; i++) {
+      if (!activeHist[i]) continue;
+      let j = i; while (j + 1 < HISTORY && activeHist[j + 1]) j++;
+      cctx.fillRect(Math.floor(i * dx), 0, Math.ceil((j - i + 1) * dx), h); i = j;
+    }
+    cctx.setLineDash([5, 5]); cctx.strokeStyle = "rgba(255,255,255,.4)"; cctx.lineWidth = 1;
+    cctx.beginPath(); cctx.moveTo(0, Y(S.on)); cctx.lineTo(w, Y(S.on)); cctx.stroke(); cctx.setLineDash([]);
+    const grad = cctx.createLinearGradient(0, Y(1), 0, Y(0));
+    grad.addColorStop(0, "#F2A541"); grad.addColorStop(1 - S.on, "#F2A541"); grad.addColorStop(1 - S.on + .001, "#6A95FF"); grad.addColorStop(1, "#6A95FF");
+    cctx.strokeStyle = grad; cctx.lineWidth = 2; cctx.lineJoin = "round";
+    cctx.beginPath();
+    for (let i = 0; i < HISTORY; i++) { const x = i * dx, y = Y(probHist[i]); i ? cctx.lineTo(x, y) : cctx.moveTo(x, y); }
+    cctx.stroke();
+  }
+
+  // ------------------------------------------------------------------ timeline
+  const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+  let span = 60;
+  function renderTimeline() {
+    span = Math.max(60, Math.ceil((S.t + 10) / 60) * 60);
+    $("trackEnd").textContent = fmt(span);
+    const track = $("track");
+    track.querySelectorAll(".capsule").forEach((c) => {
+      const ev = S.events[+c.dataset.i]; if (!ev) return;
+      const end = ev.t_end ?? S.t;
+      c.style.left = (ev.t_start / span * 100) + "%";
+      c.style.width = (Math.max(.6, (end - ev.t_start) / span * 100)) + "%";
+    });
+    $("cursor").style.left = `calc(${Math.min(100, S.t / span * 100)}% - 1px)`;
+    $("clock").textContent = fmt(S.t);
+  }
+  function addCapsule(i) {
+    const c = document.createElement("div"); c.className = "capsule"; c.dataset.i = i; c.textContent = i + 1;
+    $("track").appendChild(c); renderTimeline();
+  }
+  function renderLog(newIndex) {
+    const log = $("log");
+    log.innerHTML = S.events.map((e, i) => `<li class="${i === newIndex ? "new" : ""}">
+      <span>Whistle ${e.index}</span><span>at ${fmt(e.t_start)}</span>
+      <span>${e.t_end == null ? "sounding now" : `lasted ${e.duration.toFixed(1)} s`}</span>
+      <span>peak ${Math.round(e.peak * 100)}%</span></li>`).reverse().join("");
+    $("empty").style.display = S.events.length ? "none" : "block";
+  }
+  function rebuildTimeline() {
+    $("track").querySelectorAll(".capsule").forEach((c) => c.remove());
+    S.events.forEach((_, i) => addCapsule(i));
+    renderLog(-1);
+  }
+
+  // ------------------------------------------------------------------ status + ui
+  function renderStatus() {
+    const st = $("status"), txt = $("statusText");
+    let mode = "idle", label;
+    if (S.mode === "connecting") label = "Connecting…";
+    else if (!S.listening) label = S.mode === "demo" ? "Demo paused" : "Paused";
+    else if (S.active) { mode = "whistle"; label = "Whistle detected"; }
+    else { mode = "listening"; label = S.mode === "demo" ? "Listening to a simulated kitchen" : `Listening to ${S.source}`; }
+    st.dataset.mode = mode; txt.textContent = label;
+    $("toggleBtn").textContent = S.listening ? "Pause" : "Start listening";
+    steamRate = S.active ? .45 : 0;
+  }
+  function renderControls() {
+    setTargetLabel();
+    $("sens").value = S.sensitivity;
+    $("sensText").textContent = S.sensitivity < .34 ? "Strict" : S.sensitivity > .66 ? "Eager" : "Balanced";
+    document.querySelectorAll("[data-det]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.det === S.detector)));
+    drawThreshold();
+  }
+  let toastTimer;
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 4200);
+  }
+  let audioCtx;
+  function chime() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      [[880, 0], [1174.7, .18], [1568, .36]].forEach(([f, d]) => {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t0 = audioCtx.currentTime + d;
+        o.type = "sine"; o.frequency.value = f; o.connect(g); g.connect(audioCtx.destination);
+        g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.18, t0 + .02);
+        g.gain.exponentialRampToValueAtTime(.0001, t0 + .9); o.start(t0); o.stop(t0 + 1);
+      });
+    } catch (_) { /* audio not available */ }
+  }
+
+  // ------------------------------------------------------------------ message handling
+  function handle(m) {
+    switch (m.type) {
+      case "state": {
+        const targetChanged = m.target !== S.target;
+        Object.assign(S, { listening: m.listening, source: m.source, detector: m.detector, count: m.count,
+          target: m.target, sensitivity: m.sensitivity, on: m.on_threshold, off: m.off_threshold,
+          events: m.events, t: m.t });
+        if (m.frame_rate) S.frameRate = m.frame_rate;
+        if (targetChanged || !$("segs").children.length) drawSegments(); else paintSegments(false);
+        setCount(S.count, false); renderControls(); renderStatus(); rebuildTimeline(); renderTimeline();
+        if (S.count < S.target) { $("doneBanner").classList.remove("show"); S.dismissed = false; }
+        break;
+      }
+      case "frame": {
+        S.t = m.t; S.prob = m.prob;
+        const wasActive = S.active; S.active = m.active;
+        probHist.copyWithin(0, 1); probHist[HISTORY - 1] = m.prob;
+        activeHist.copyWithin(0, 1); activeHist[HISTORY - 1] = m.active ? 1 : 0;
+        pushSpecColumn(m.spec);
+        $("level").textContent = `${Math.round(m.level)} dBFS`;
+        if (wasActive !== S.active) { renderStatus(); paintSegments(false); }
+        break;
+      }
+      case "whistle_start": {
+        S.count = m.count; S.events.push(m.event); S.active = true;
+        setCount(S.count, true); paintSegments(false); steamBurst(); addCapsule(S.events.length - 1);
+        renderLog(S.events.length - 1); renderStatus();
+        $("announce").textContent = `Whistle ${S.count} of ${S.target}`;
+        break;
+      }
+      case "whistle_end": {
+        const i = S.events.findIndex((e) => e.index === m.event.index);
+        if (i >= 0) S.events[i] = m.event;
+        S.active = false; renderLog(-1); renderTimeline(); renderStatus(); paintSegments(false);
+        break;
+      }
+      case "target_reached": {
+        $("doneTitle").textContent = `${m.count} whistle${m.count === 1 ? "" : "s"} reached`;
+        $("doneBanner").classList.add("show"); chime();
+        $("announce").textContent = `${m.count} whistles reached. Time to turn off the stove.`;
+        if ("Notification" in window && Notification.permission === "granted")
+          new Notification("Resona", { body: `${m.count} whistles reached. Time to turn off the stove.` });
+        break;
+      }
+      case "reset": {
+        S.count = 0; S.events = []; S.t = 0; S.active = false; probHist.fill(0); activeHist.fill(0);
+        octx.fillStyle = "#0A1015"; octx.fillRect(0, 0, HISTORY, 64);
+        setCount(0, false); paintSegments(true); rebuildTimeline(); renderTimeline();
+        $("doneBanner").classList.remove("show");
+        break;
+      }
+      case "source_ended": toast("The recording finished. Start a new session to play it again."); break;
+      case "error": toast(m.message); break;
+      case "notify_result": {
+        const res = Object.entries(m.results || {}), names = { telegram: "Telegram", ntfy: "ntfy app" };
+        const failed = res.filter(([, r]) => !r.ok), sent = res.filter(([, r]) => r.ok).map(([k]) => names[k]);
+        if (failed.length) toast(`Couldn’t send the alert to ${names[failed[0][0]]}. ${failed[0][1].error}`);
+        else if (sent.length) toast(`Sent “${m.title}” to ${sent.join(" and ")}`);
+        break;
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------ transport: server or demo
+  let ws = null, sim = null;
+  function send(cmd, value) {
+    if (S.mode === "live" && ws && ws.readyState === 1) ws.send(JSON.stringify({ cmd, value }));
+    else if (S.mode === "demo") sim.command(cmd, value);
+  }
+  function connect() {
+    if (new URLSearchParams(location.search).has("demo") || !/^https?:$/.test(location.protocol)) return startDemo();
+    let opened = false;
+    try {
+      ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
+    } catch (_) { return startDemo(); }
+    const fallback = setTimeout(() => { if (!opened) { try { ws.close(); } catch (_) {} startDemo(); } }, 1500);
+    ws.onopen = () => { opened = true; clearTimeout(fallback); S.mode = "live"; renderStatus(); loadNotify(); };
+    ws.onmessage = (e) => handle(JSON.parse(e.data));
+    ws.onerror = () => { if (!opened) { clearTimeout(fallback); startDemo(); } };
+    ws.onclose = () => {
+      if (opened && S.mode === "live") { S.mode = "connecting"; renderStatus(); toast("Lost connection to the Resona server. Reconnecting…"); setTimeout(connect, 2000); }
+    };
+  }
+  function startDemo() {
+    if (S.mode === "demo") return;
+    S.mode = "demo"; S.source = "simulated kitchen"; $("demoNote").classList.add("show");
+    sim = new Simulator(handle); sim.emitState(); sim.command("start");
+  }
+
+  // Simulated kitchen that speaks the same protocol as resona/server.py
+  function Simulator(emit) {
+    const st = { listening: false, t: 0, target: 3, sens: .5, det: "dsp", prob: 0 };
+    const C = { state: "idle", count: 0, events: [], start: 0, peak: 0, release: 0, min: .6, gap: .8 };
+    let timer = null, nextWhistle = 4, whistleEnd = -1, whistleStart = -1, nextMixer = 9, mixerEnd = -1, nextTalk = 2, talkEnd = -1, announced = false;
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    const thresholds = () => {
+      const shift = (.5 - st.sens) * .4, on = Math.min(.95, Math.max(.2, .6 + shift));
+      return [on, Math.min(on - .05, Math.max(.1, .4 + shift))];
+    };
+    const state = () => {
+      const [on, off] = thresholds();
+      return { type: "state", listening: st.listening, source: "simulated kitchen", detector: st.det, count: C.count,
+        target: st.target, sensitivity: st.sens, on_threshold: on, off_threshold: off,
+        events: C.events.map((e) => ({ ...e })), t: st.t, frame_rate: 25 };
+    };
+    this.emitState = () => emit(state());
+    const ev = (e) => ({ ...e, duration: e.t_end == null ? null : e.t_end - e.t_start });
+    function counter(p, t) {
+      const [on, off] = thresholds();
+      if (C.state === "idle") { if (p >= on) { C.state = "cand"; C.start = t; C.peak = p; } }
+      else if (C.state === "cand") {
+        if (p < off) C.state = "idle";
+        else { C.peak = Math.max(C.peak, p);
+          if (t - C.start >= C.min) {
+            C.count++; const e = { index: C.count, t_start: C.start, t_end: null, peak: C.peak, duration: null };
+            C.events.push(e); C.state = "active"; emit({ type: "whistle_start", count: C.count, event: ev(e) });
+            if (!announced && C.count >= st.target) { announced = true; emit({ type: "target_reached", count: C.count, target: st.target }); }
+          } }
+      } else if (C.state === "active") { const e = C.events[C.events.length - 1]; e.peak = Math.max(e.peak, p); if (p < off) { C.state = "rel"; C.release = t; } }
+      else if (C.state === "rel") {
+        if (p >= on) C.state = "active";
+        else if (t - C.release >= C.gap) { const e = C.events[C.events.length - 1]; e.t_end = C.release; C.state = "idle"; emit({ type: "whistle_end", count: C.count, event: ev(e) }); }
+      }
+    }
+    function tick() {
+      const t = st.t, dt = .04;
+      if (t >= nextWhistle && whistleEnd < t) { whistleStart = t; whistleEnd = t + rnd(2.4, 4.6); nextWhistle = whistleEnd + rnd(9, 16); }
+      if (t >= nextMixer && mixerEnd < t) { mixerEnd = t + rnd(3, 6); nextMixer = mixerEnd + rnd(14, 24); }
+      if (t >= nextTalk && talkEnd < t) { talkEnd = t + rnd(2, 5); nextTalk = talkEnd + rnd(4, 9); }
+      const w = t < whistleEnd ? Math.min(1, (t - whistleStart) / .25) * Math.min(1, (whistleEnd - t) / .45) : 0;
+      const mx = t < mixerEnd ? 1 : 0, talk = t < talkEnd ? Math.pow(.5 + .5 * Math.sin(t * 25), 2) : 0;
+      const spec = new Array(64);
+      const tone = 43 + Math.round(Math.sin(t * 6));
+      for (let i = 0; i < 64; i++) {
+        let v = .2 - i * .0018 + Math.random() * .07;
+        if (i === 4 || i === 5) v += .16;
+        if (mx) v += i < 30 ? .38 * (1 - i / 40) + Math.random() * .12 : .05;
+        if (talk && i > 8 && i < 36) v += .2 * talk * (.6 + .4 * Math.random());
+        if (w > 0 && i >= 26 && i <= 62) v += .42 * w * (.7 + .3 * Math.random());
+        if (w > 0 && Math.abs(i - tone) <= 1) v += .3 * w;
+        spec[i] = Math.max(0, Math.min(1, v));
+      }
+      const noise = st.det === "cnn" ? .03 : .07;
+      const raw = Math.max(0, Math.min(1, w > .25 ? .93 - Math.random() * .1 : (mx ? .12 : .02) + Math.random() * noise));
+      st.prob = .7 * st.prob + .3 * raw;
+      counter(st.prob, t);
+      emit({ type: "frame", t, spec, prob: st.prob, level: -38 + 18 * Math.max(w, mx * .8, talk * .4) + Math.random() * 2,
+        active: C.state === "active" || C.state === "rel" });
+      st.t += dt;
+    }
+    this.command = (cmd, value) => {
+      if (cmd === "start" && !st.listening) { st.listening = true; timer = setInterval(tick, 40); }
+      else if (cmd === "stop") { st.listening = false; clearInterval(timer); }
+      else if (cmd === "reset") {
+        Object.assign(C, { state: "idle", count: 0, events: [] }); st.t = 0; st.prob = 0; announced = false;
+        nextWhistle = 4; whistleEnd = -1; nextMixer = 9; mixerEnd = -1; nextTalk = 2; talkEnd = -1;
+        emit({ type: "reset" });
+      }
+      else if (cmd === "set_target") { st.target = Math.max(1, Math.min(20, value)); announced = C.count >= st.target; }
+      else if (cmd === "set_sensitivity") st.sens = value;
+      else if (cmd === "set_detector") st.det = value;
+      this.emitState();
+    };
+  }
+
+  // ------------------------------------------------------------------ controls wiring
+  $("toggleBtn").onclick = () => {
+    if (!S.listening && S.mode === "live" && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    send(S.listening ? "stop" : "start");
+  };
+  $("resetBtn").onclick = () => send("reset");
+  $("dismissBtn").onclick = () => $("doneBanner").classList.remove("show");
+  $("minus").onclick = () => send("set_target", Math.max(1, S.target - 1));
+  $("plus").onclick = () => send("set_target", Math.min(20, S.target + 1));
+  let sensTimer;
+  $("sens").oninput = (e) => {
+    const v = parseFloat(e.target.value);
+    $("sensText").textContent = v < .34 ? "Strict" : v > .66 ? "Eager" : "Balanced";
+    clearTimeout(sensTimer); sensTimer = setTimeout(() => send("set_sensitivity", v), 120);
+  };
+  document.querySelectorAll("[data-det]").forEach((b) => b.onclick = () => send("set_detector", b.dataset.det));
+
+
+  // ------------------------------------------------------------------ phone alerts
+  let N = { telegram: { ready: false, has_token: false }, ntfy: { ready: false }, each_whistle: true };
+  let tab = "telegram", pollTimer = null, pollUntil = 0, busy = false;
+  const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  async function api(path, method = "GET", data) {
+    const r = await fetch(path, { method, headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || `The server returned an error (${r.status}).`);
+    return j;
+  }
+  async function loadNotify() {
+    if (S.mode !== "live") { renderAlerts(); return; }
+    try { N = await api("/api/notify"); } catch (_) { /* older server */ }
+    renderAlerts();
+  }
+  function renderAlerts() {
+    const tg = N.telegram.ready, nf = N.ntfy.ready;
+    $("chipTelegram").dataset.on = tg; $("chipNtfy").dataset.on = nf;
+    $("alertsSummary").textContent = tg && nf ? "Telegram and ntfy" : tg ? "Telegram" : nf ? "ntfy app" : "Off";
+    $("alertsBtn").textContent = tg || nf ? "Manage phone alerts" : "Set up phone alerts";
+    if ($("alertsDialog").open) renderPanels();
+  }
+  function qr(el, text) {
+    if (!el) return;
+    if (!window.QRCode || !text) { el.classList.add("missing"); return; }
+    el.innerHTML = "";
+    new QRCode(el, { text, width: 120, height: 120, colorDark: "#16202A", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M });
+  }
+  function renderPanels() {
+    const demo = S.mode !== "live";
+    $("alertsDemo").hidden = !demo;
+    $("alertsFields").disabled = demo;
+    $("eachWhistle").checked = N.each_whistle; $("eachWhistle").disabled = demo;
+    $("testAlert").disabled = demo || !(N.telegram.ready || N.ntfy.ready);
+    document.querySelectorAll("[data-tab]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tab === tab)));
+    $("panelTelegram").hidden = tab !== "telegram"; $("panelNtfy").hidden = tab !== "ntfy";
+
+    const t = N.telegram, pt = $("panelTelegram");
+    if (t.ready) {
+      stopPolling();
+      pt.innerHTML = `<div class="ok-line"><span>Alerts go to <b>${esc(t.name)}</b> through <b>@${esc(t.bot)}</b>.</span></div>
+        <button class="textbtn" type="button" data-act="tg-off">Disconnect Telegram</button>`;
+    } else if (t.has_token) {
+      pt.innerHTML = `<p>Now open your bot in Telegram and press <b>Start</b>. Resona will link your chat automatically.</p>
+        <div class="link-card"><div class="qr" id="tgQr"></div>
+          <div class="stack"><a class="btn link" href="${esc(t.link)}" target="_blank" rel="noopener">Open @${esc(t.bot)}</a>
+            <div class="waiting"><span class="spinner"></span><span id="tgWait">Waiting for your message…</span></div></div></div>
+        <p class="form-error" id="tgErr"></p>
+        <button class="textbtn" type="button" data-act="tg-off">Use a different bot</button>`;
+      qr($("tgQr"), t.link); startPolling();
+    } else {
+      pt.innerHTML = `<ol>
+          <li>In Telegram, open <b>@BotFather</b> and send <b>/newbot</b>. Pick any name for your bot.</li>
+          <li>BotFather replies with a token. Paste it here.</li>
+        </ol>
+        <div class="field"><input id="tgToken" type="text" inputmode="text" autocomplete="off" spellcheck="false"
+          placeholder="123456789:AA…" aria-label="Bot token"><button class="btn primary" type="button" data-act="tg-connect">Connect bot</button></div>
+        <p class="form-error" id="tgErr"></p>`;
+    }
+
+    const n = N.ntfy, pn = $("panelNtfy");
+    if (n.ready) {
+      pn.innerHTML = `<p>In the ntfy app, tap <b>+</b> and subscribe to this topic. You can also scan the code with your phone.</p>
+        <div class="link-card"><div class="qr" id="ntfyQr"></div>
+          <div class="stack"><div class="topic" id="topicName">${esc(n.topic)}</div>
+            <button class="btn" type="button" data-act="ntfy-copy">Copy topic name</button></div></div>
+        <p class="fine">Anyone who knows this name can read these alerts, so keep it private.</p>
+        <button class="textbtn" type="button" data-act="ntfy-off">Stop ntfy alerts</button>`;
+      qr($("ntfyQr"), n.link);
+    } else {
+      pn.innerHTML = `<ol>
+          <li>Install the free <b>ntfy</b> app on your phone from the App Store or Google Play. No account is needed.</li>
+          <li>Create a private topic for this kitchen, then subscribe to it in the app.</li>
+        </ol>
+        <button class="btn primary" type="button" data-act="ntfy-create">Create my topic</button>
+        <p class="form-error" id="ntfyErr"></p>`;
+    }
+  }
+  function startPolling() {
+    if (pollTimer) return;
+    pollUntil = Date.now() + 120000;
+    pollTimer = setInterval(async () => {
+      if (!$("alertsDialog").open) return stopPolling();
+      if (Date.now() > pollUntil) {
+        stopPolling();
+        const w = $("tgWait"); if (w) w.textContent = "No message yet. Press Start in your bot, then reopen this window.";
+        return;
+      }
+      try {
+        const r = await api("/api/notify/telegram/link", "POST");
+        if (r.linked) { N = r; stopPolling(); renderAlerts(); toast(`Telegram connected. A confirmation was sent to ${r.telegram.name}.`); }
+      } catch (e) { const el = $("tgErr"); if (el) el.textContent = e.message; }
+    }, 2500);
+  }
+  function stopPolling() { clearInterval(pollTimer); pollTimer = null; }
+
+  async function act(name, btn) {
+    if (busy) return; busy = true; if (btn) btn.disabled = true;
+    try {
+      if (name === "tg-connect") {
+        $("tgErr").textContent = "";
+        N = await api("/api/notify/telegram", "POST", { token: $("tgToken").value });
+      } else if (name === "tg-off") { stopPolling(); N = await api("/api/notify/telegram", "DELETE"); }
+      else if (name === "ntfy-create") N = await api("/api/notify/ntfy", "POST", {});
+      else if (name === "ntfy-off") N = await api("/api/notify/ntfy", "DELETE");
+      else if (name === "ntfy-copy") {
+        await navigator.clipboard.writeText(N.ntfy.topic).catch(() => {});
+        if (btn) { btn.textContent = "Copied"; setTimeout(() => { btn.textContent = "Copy topic name"; }, 1600); }
+      }
+      renderAlerts();
+    } catch (e) {
+      const el = $(name.startsWith("tg") ? "tgErr" : "ntfyErr"); if (el) el.textContent = e.message; else toast(e.message);
+    } finally { busy = false; if (btn && document.body.contains(btn)) btn.disabled = false; }
+  }
+  $("alertsDialog").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-act]"); if (b) act(b.dataset.act, b);
+    const t = e.target.closest("[data-tab]"); if (t) { tab = t.dataset.tab; renderPanels(); }
+    if (e.target === $("alertsDialog")) $("alertsDialog").close();
+  });
+  $("alertsDialog").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.id === "tgToken") { e.preventDefault(); act("tg-connect", null); }
+  });
+  $("alertsDialog").addEventListener("close", stopPolling);
+  $("alertsBtn").onclick = async () => { $("testResult").textContent = ""; await loadNotify(); $("alertsDialog").showModal(); renderPanels(); };
+  $("alertsClose").onclick = () => $("alertsDialog").close();
+  $("eachWhistle").onchange = async (e) => {
+    try { N = await api("/api/notify/prefs", "POST", { each_whistle: e.target.checked }); } catch (err) { toast(err.message); }
+  };
+  $("testAlert").onclick = async () => {
+    const out = $("testResult"), btn = $("testAlert");
+    btn.disabled = true; out.textContent = "Sending…";
+    try {
+      const r = await api("/api/notify/test", "POST"), names = { telegram: "Telegram", ntfy: "ntfy app" };
+      out.textContent = Object.entries(r.results).map(([k, v]) => v.ok ? `${names[k]}: sent` : `${names[k]}: ${v.error}`).join(". ");
+    } catch (e) { out.textContent = e.message; }
+    btn.disabled = false;
+  };
+
+  // ------------------------------------------------------------------ render loop
+  let shownProb = 0, lastTimeline = 0;
+  function loop(now) {
+    shownProb += (S.prob - shownProb) * .25;
+    const arcEl = $("confArc");
+    arcEl.style.strokeDashoffset = 100 - shownProb * 100;
+    arcEl.classList.toggle("hot", shownProb >= S.on);
+    $("confPct").textContent = Math.round(shownProb * 100) + "%";
+    drawScreens(); drawSteam();
+    if (now - lastTimeline > 250) { renderTimeline(); lastTimeline = now; }
+    requestAnimationFrame(loop);
+  }
+  function resize() { sizeCanvas(spec, spctx); sizeCanvas(conf, cctx); sizeSteam(); }
+  addEventListener("resize", resize);
+  resize(); drawSegments(); renderControls(); renderStatus(); renderLog(-1);
+  requestAnimationFrame(loop);
+  connect();
+})();
+</script>
+</body>
+</html>

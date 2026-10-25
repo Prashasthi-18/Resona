@@ -1,0 +1,7 @@
+numpy>=1.24
+scipy>=1.10
+fastapi>=0.110
+uvicorn[standard]>=0.27
+sounddevice>=0.4.6     # live microphone (needs PortAudio; bundled on Windows/macOS)
+torch>=2.1             # only for the neural-network detector and training
+pytest>=7              # tests

@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+data/real/
+data/synthetic/
+models/*.pt
+notify.json
